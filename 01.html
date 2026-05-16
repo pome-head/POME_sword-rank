@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POME工会 - 剑术PVP排行榜</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --card-bg: rgba(20, 20, 35, 0.95);
+            --border-color: rgba(0, 200, 255, 0.2);
+            --text-primary: #e0e0ff;
+            --text-secondary: #8888aa;
+            --gold: #ffd700;
+            --silver: #c0c0c0;
+            --bronze: #cd7f32;
+            --elite-gradient: linear-gradient(90deg, #ff4d4d, #f9cb28, #4cd964, #5ac8fa, #ff2d55);
+            --glitch-color-1: #ff0000;
+            --glitch-color-2: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 20% 30%, rgba(40, 40, 80, 0.5) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 70%, rgba(60, 20, 60, 0.5) 0%, transparent 50%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            backdrop-filter: blur(10px);
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.1);
+            overflow: visible;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff4d4d, #ff2d55, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 45, 85, 0.5);
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .ranking-list {
+            padding: 20px;
+            position: relative;
+            overflow: visible;
+        }
+
+        .rank-item {
+            display: grid;
+            grid-template-columns: 60px 1fr 100px;
+            align-items: center;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: visible;
+        }
+
+        .rank-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-3px);
+        }
+
+        /* 前三名边框光效 */
+        .rank-item.rank-1 {
+            border-left-color: var(--gold);
+            animation: glow-gold 2s infinite alternate;
+        }
+        .rank-item.rank-2 {
+            border-left-color: var(--silver);
+            animation: glow-silver 2s infinite alternate;
+        }
+        .rank-item.rank-3 {
+            border-left-color: var(--bronze);
+            animation: glow-bronze 2s infinite alternate;
+        }
+
+        @keyframes glow-gold {
+            from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+        }
+        @keyframes glow-silver {
+            from { box-shadow: 0 0 10px rgba(192, 192, 192, 0.3); }
+            to { box-shadow: 0 0 20px rgba(192, 192, 192, 0.6); }
+        }
+        @keyframes glow-bronze {
+            from { box-shadow: 0 0 10px rgba(205, 127, 50, 0.3); }
+            to { box-shadow: 0 0 20px rgba(205, 127, 50, 0.6); }
+        }
+
+        .rank-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 900;
+            text-align: center;
+            position: relative; /* 为提示框定位 */
+            cursor: default; /* 表示这里有交互 */
+        }
+        .rank-1 .rank-number { color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+        .rank-2 .rank-number { color: var(--silver); text-shadow: 0 0 10px var(--silver); }
+        .rank-3 .rank-number { color: var(--bronze); text-shadow: 0 0 10px var(--bronze); }
+        .rank-number.others { color: #555; }
+
+        /* 悬停提示 - 现在绑定在等级数字上 */
+        .rank-number::after {
+            content: attr(data-hint);
+            position: absolute;
+            bottom: calc(100% + 15px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            white-space: normal;
+            min-width: 160px;
+            max-width: 300px;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 99999;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+            line-height: 1.5;
+        }
+        
+        /* 提示框小箭头 */
+        .rank-number::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: rgba(0, 0, 0, 0.95);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+            z-index: 99999;
+            pointer-events: none;
+        }
+        
+        .rank-number:hover::after,
+        .rank-number:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            position: relative;
+        }
+
+        /* 精英及以上 - 炫酷渐变 */
+        .player-name.elite {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1.3rem;
+            background: var(--elite-gradient);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine {
+            to { background-position: 200% center; }
+        }
+
+        /* 普通会员/成员 */
+        .player-name.member { color: #a0a0ff; }
+        .player-name.trial { color: #707090; }
+
+        /* 故障效果 - Null */
+        .player-name.glitch {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 1.4rem;
+            color: var(--glitch-color-2);
+            animation: glitch-effect 1s infinite;
+            text-shadow: 
+                2px 2px 0 var(--glitch-color-1),
+                -2px -2px 0 blue;
+            position: relative;
+        }
+
+        @keyframes glitch-effect {
+            0% {
+                transform: translate(0);
+                color: #fff;
+                text-shadow: 2px 2px 0 red, -2px -2px 0 blue;
+            }
+            20% {
+                transform: translate(-2px, 2px);
+                color: red;
+                text-shadow: -2px -2px 0 blue, 2px 2px 0 white;
+            }
+            40% {
+                transform: translate(2px, -2px);
+                color: white;
+                text-shadow: 2px -2px 0 red, -2px 2px 0 blue;
+            }
+            60% {
+                transform: translate(-2px, -2px);
+                color: red;
+                text-shadow: -2px 2px 0 white, 2px -2px 0 blue;
+            }
+            80% {
+                transform: translate(2px, 2px);
+                color: white;
+                text-shadow: 2px 2px 0 blue, -2px -2px 0 red;
+            }
+            100% {
+                transform: translate(0);
+                color: #fff;
+                text-shadow: 2px 2px 0 red, -2px -2px 0 blue;
+            }
+        }
+
+        .player-id {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .player-grade {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            font-size: 1.4rem;
+            text-align: right;
+            color: #4cd964;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.8rem;
+            color: #555;
+            border-top: 1px solid var(--border-color);
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>POME 剑术 PVP 榜</h1>
+        <p>等级 D5 ~ A1 | 悬停查看备注 | 荣耀归于胜者</p>
+    </div>
+
+    <div class="ranking-list" id="rankingList">
+        <!-- 排行榜将通过JS动态生成 -->
+    </div>
+
+    <div class="footer">
+        POME工会 © 2026 | 数据实时更新
+    </div>
+</div>
+
+<script>
+    // 修正后的数据定义
+    const players = [
+        // 新增的神秘玩家
+        { name: "null", grade: "A1", role: "？？？", hint: "未知存在，数据读取失败..." },
+
+        // 会长
+        { name: "pome彡遗丿忘", grade: "C3", role: "会长", hint: "最佳成绩" },
+        
+        // 精英
+        { name: "pome彡逸丿秋", grade: "D1", role: "精英", hint: "退休" },
+        { name: "pome彡仁丿鸡", grade: "D1", role: "精英", hint: "最佳成绩" },
+        { name: "也曾与之并肩", grade: "D2", role: "精英", hint: "退休" },
+        { name: "pome彡胡丿桃", grade: "D3", role: "精英", hint: "退休" },
+        { name: "pome彡摔丿鸽", grade: "D3", role: "精英", hint: "退休" },
+        
+        // 会员
+        { name: "pome雨", grade: "D3", role: "会员", hint: "最佳成绩" },
+        { name: "pome彡猫丿漿", grade: "--", role: "会员", hint: "还没有成绩哦" },
+        
+        // 成员
+        { name: "他始终是过客", grade: "--", role: "成员", hint: "还没有成绩哦" },
+        { name: "克莱因蓝_狼", grade: "--", role: "成员", hint: "还没有成绩哦" },
+        { name: "浙江的猫猫", grade: "--", role: "成员", hint: "还没有成绩哦" },
+        { name: "pome彡落丿衡", grade: "--", role: "成员", hint: "还没有成绩哦" },
+        { name: "pome彡心丿碎", grade: "--", role: "成员", hint: "还没有成绩哦" }
+    ];
+
+    // 等级权重映射 (用于排序)
+    const gradeOrder = {};
+    const grades = ["D5", "D4", "D3", "D2", "D1", "C5", "C4", "C3", "C2", "C1", "B5", "B4", "B3", "B2", "B1", "A5", "A4", "A3", "A2", "A1"];
+    grades.forEach((g, i) => gradeOrder[g] = i);
+
+    // 身份权重映射
+    const roleOrder = { "？？？": 6, "会长": 5, "精英": 4, "会员": 3, "成员": 2 };
+
+    // 排序逻辑：先按等级降序，再按身份降序
+    players.sort((a, b) => {
+        const gradeDiff = (gradeOrder[b.grade] || -1) - (gradeOrder[a.grade] || -1);
+        if (gradeDiff !== 0) return gradeDiff;
+        return roleOrder[b.role] - roleOrder[a.role];
+    });
+
+    // 渲染列表
+    const listEl = document.getElementById('rankingList');
+    
+    players.forEach((player, index) => {
+        const rank = index + 1;
+        const item = document.createElement('div');
+        
+        let rankClass = '';
+        if (rank === 1) rankClass = 'rank-1';
+        else if (rank === 2) rankClass = 'rank-2';
+        else if (rank === 3) rankClass = 'rank-3';
+
+        // 判断是否为精英及以上
+        const isElite = player.role === '会长' || player.role === '精英';
+        const isGlitch = player.role === '？？？';
+        
+        let nameClass = 'player-name trial';
+        if (isGlitch) {
+            nameClass = 'player-name glitch';
+        } else if (isElite) {
+            nameClass = 'player-name elite';
+        } else if (player.role === '会员') {
+            nameClass = 'player-name member';
+        }
+
+        item.className = `rank-item ${rankClass}`;
+        
+        // 提示框现在绑定在 rank-number 上
+        item.innerHTML = `
+            <div class="rank-number ${rank > 3 ? 'others' : ''}" data-hint="${player.hint}">${String(rank).padStart(2, '0')}</div>
+            <div class="player-info">
+                <div class="${nameClass}">${player.name}</div>
+                <div class="player-id">${player.role}</div>
+            </div>
+            <div class="player-grade">${player.grade}</div>
+        `;
+        
+        listEl.appendChild(item);
+    });
+</script>
+
+</body>
+</html>
