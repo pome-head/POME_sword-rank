@@ -1,0 +1,14 @@
+{
+  "name": "pome-sword-rank",
+  "version": "1.0.0",
+  "description": "POME工会 - 剑术PVP排行榜",
+  "scripts": {
+    "dev": "npx http-server -p 3000",
+    "build": "echo 'No build step required for static HTML'"
+  },
+  "dependencies": {
+    "@vercel/analytics": "^1.1.1"
+  },
+  "devDependencies": {},
+  "private": true
+}

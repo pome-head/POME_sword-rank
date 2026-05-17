@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# npm
+npm-debug.log*
+.npm
+
+# Vercel
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
