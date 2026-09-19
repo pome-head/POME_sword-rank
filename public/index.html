@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>POME工会 - 剑术PVP排行榜</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg-color: #0a0a0f;
+    --border-color: rgba(0, 200, 255, 0.4);
+    --text-primary: #e0e0ff;
+    --text-secondary: #8888aa;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+    --elite-gradient: linear-gradient(90deg, #ff4d4d, #f9cb28, #4cd964, #5ac8fa, #ff2d55);
+    --glitch-color-1: #ff0000;
+    --glitch-color-2: #ffffff;
+    --rank-other-color: #00e5ff;
+    --accent: #00eaff;
+
+    /* ===== 弹幕响应式参数（由下方 @media 按 竖屏/横屏 覆盖） ===== */
+    --meteor-text-size: 20px;        /* 弹幕字号 */
+    --meteor-text-size-ult: 24px;   /* 终极弹幕字号 */
+    --meteor-tail: 150px;           /* 尾迹长度 */
+    --meteor-x: 140px;              /* 坠落水平位移 */
+    --meteor-y: 115vh;              /* 坠落垂直位移 */
+    --meteor-left-min: -4vw;        /* 水平起始最小值（含左移） */
+    --meteor-left-max: 79vw;        /* 水平起始最大值 */
+    --meteor-per-burst: 4;          /* 每批流星数 */
+    --meteor-interval: 420;         /* 批次间隔(ms)：越长越稀疏（手机端由 @media 调大） */
+    --meteor-pad: 8px 16px;         /* 气泡内边距 */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 背景图 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.bg-img {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover; z-index: -2;
+    content: url('https://i.ibb.co/Kxr0Y8Zs/d19aa69cab84a3d11ea0d08dd4b9680c23a76ad4.jpg');
+}
+.bg-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10, 10, 20, 0.25); z-index: -1;
+}
+@media (max-width: 850px) and (aspect-ratio: 16/9),
+       (max-width: 850px) and (aspect-ratio: 18/9) {
+    .bg-img { content: url('https://i.ibb.co/Kxr0Y8Zs/d19aa69cab84a3d11ea0d08dd4b9680c23a76ad4.jpg'); }
+}
+@media (max-width: 768px) and (orientation: portrait) {
+    .bg-img { content: url('https://i.ibb.co/gLRwhRNK/77804909-p0.png'); }
+}
+
+/* 公告栏 */
+#notice {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 90%; max-width: 640px;
+    background: rgba(10, 10, 20, 0.97); color: #ddd;
+    padding: 32px 36px; border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.15);
+    box-shadow: 0 0 40px rgba(0,0,0,.6);
+    font-size: 14px; line-height: 1.7; text-align: center;
+    z-index: 999999; opacity: 0; visibility: hidden;
+    transition: opacity .4s ease, visibility .4s ease;
+}
+#notice.show { opacity: 1; visibility: visible; }
+#notice button { margin-top: 22px; background: #e74c3c; border: none; color: #fff; padding: 10px 22px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+#notice button:disabled { background: #666; cursor: not-allowed; }
+
+/* 排行榜容器 */
+.container {
+    width: 100%; max-width: 900px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 0 50px rgba(0, 100, 255, 0.1);
+    overflow: visible;
+}
+
+.header { text-align: center; padding: 30px; background: rgba(0, 0, 0, 0.3); border-bottom: 1px solid var(--border-color); }
+.header h1 { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 900; background: linear-gradient(135deg, #ff4d4d, #ff2d55, #ff9500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 20px rgba(255, 45, 85, 0.5); }
+.header p { color: var(--text-secondary); margin-top: 10px; font-size: 0.9rem; }
+
+/* =========================================
+   导航栏（最上方独立，吸顶）
+   ========================================= */
+.navbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99998;
+    display: flex; justify-content: center; gap: 12px;
+    padding: 12px 20px;
+    background: rgba(10, 10, 30, 0.75); backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    flex-wrap: wrap;
+}
+/* 给主体内容留出顶部空间，避免被固定导航栏遮挡 */
+.container { margin-top: 64px; }
+.nav-item {
+    padding: 8px 22px; font-size: 15px; font-weight: 600;
+    color: var(--text-secondary); cursor: pointer;
+    border-radius: 10px; transition: all .25s ease;
+    border: 1px solid transparent; user-select: none;
+    font-family: 'Orbitron', 'Segoe UI', sans-serif;
+    letter-spacing: 1px;
+}
+.nav-item:hover { color: var(--text-primary); background: rgba(0, 200, 255, 0.1); }
+.nav-item.active {
+    color: #fff; border-color: var(--border-color);
+    background: linear-gradient(135deg, rgba(0,234,255,.18), rgba(0,136,204,.18));
+    box-shadow: 0 0 14px rgba(0, 234, 255, 0.35);
+}
+
+/* 页面区块切换 */
+.page { display: none; animation: fadeIn .35s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ---- 工会介绍页样式 ---- */
+.intro-content { padding: 8px 4px; }
+.intro-section { margin-bottom: 26px; }
+.intro-section h2 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.35rem; font-weight: 700;
+    color: var(--accent); margin-bottom: 10px;
+    padding-left: 12px; border-left: 4px solid var(--accent);
+    text-shadow: 0 0 10px rgba(0,234,255,.4);
+}
+.intro-section p { font-size: 14px; line-height: 1.8; color: var(--text-primary); }
+.intro-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px; margin-top: 6px;
+}
+.intro-card {
+    background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 16px; transition: all .25s ease;
+}
+.intro-card:hover { transform: translateY(-3px); box-shadow: 0 0 18px rgba(0,200,255,.2); }
+.intro-card .card-title { font-weight: 700; color: var(--accent); font-size: 15px; margin-bottom: 6px; }
+.intro-card .card-text { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.join-btn {
+    display: inline-block; margin-top: 10px; padding: 9px 26px;
+    background: linear-gradient(135deg, #00eaff, #0088cc); color: #001018;
+    font-weight: 700; border: none; border-radius: 10px; cursor: pointer;
+    font-size: 14px; transition: all .25s ease; text-decoration: none;
+}
+.join-btn:hover { transform: scale(1.04); box-shadow: 0 0 20px rgba(0,234,255,.6); }
+
+/* ---- POME 光刃之契 区块 ---- */
+.pome-origin-section { margin-bottom: 34px; }
+.pome-origin-inner {
+    background: rgba(10, 15, 30, 0.6); border: 1px solid rgba(0, 234, 255, 0.2);
+    border-radius: 16px; padding: 36px 28px; backdrop-filter: blur(8px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.pome-origin-title {
+    text-align: center; font-size: 1.8em; color: #00eaff; margin-bottom: 24px;
+    letter-spacing: 3px; text-shadow: 0 0 12px rgba(0, 234, 255, 0.5);
+    font-family: 'Orbitron', sans-serif; font-weight: 700;
+}
+.pome-story-text {
+    font-size: 1em; color: rgba(255, 255, 255, 0.85); line-height: 1.8;
+    margin-bottom: 24px; text-align: justify;
+}
+/* 核心标语（显眼流光） */
+.pome-slogan-box {
+    /* --mx/--my 由 JS 实时更新 = 鼠标在框内的坐标（百分比） */
+    --mx: 50%; --my: 50%; --glow: 0;
+    background: linear-gradient(135deg, rgba(0,234,255,0.15) 0%, rgba(0,0,0,0.4) 100%);
+    border: 1px solid rgba(0, 234, 255, 0.4); border-radius: 12px;
+    padding: 28px 20px; text-align: center; margin: 30px 0; position: relative; overflow: hidden;
+    cursor: pointer;
+    /* 整体缓动，包含外发光强度过渡 */
+    transition: transform .5s cubic-bezier(.22,.9,.24,1), box-shadow .6s ease;
+    /* 自定义属性也需要过渡，让聚光跟随柔和 */
+    transition: transform .5s cubic-bezier(.22,.9,.24,1), box-shadow .6s ease, --glow .5s ease;
+}
+/* 鼠标覆盖时：整框轻微浮起 + 以鼠标为圆心叠加一层外发光 */
+.pome-slogan-box.is-hover {
+    transform: translateY(-3px);
+    box-shadow:
+        0 0 calc(20px + 40px * var(--glow)) rgba(0, 234, 255, calc(.25 + .35 * var(--glow))),
+        0 0 calc(40px + 60px * var(--glow)) rgba(255, 45, 85, calc(.10 + .25 * var(--glow)));
+}
+/*
+ * 关键：用 radial-gradient 做"聚光遮罩"
+ * - 只有鼠标附近 (--mx, --my) 半径内才是金红色（变色区）
+ * - 其余区域保持原本青蓝流光（不变色）
+ * - --glow 从 0→1 平滑过渡，实现"只有覆盖处渐变"
+ */
+.pome-slogan-text {
+    /* 在原有青蓝流光背景之上，叠加一层金红，用 mask 控制显隐范围 */
+    background:
+        radial-gradient(circle 180px at var(--mx) var(--my),
+            rgba(255, 45, 85, calc(.55 * var(--glow))) 0%,
+            rgba(255, 215, 0, calc(.35 * var(--glow))) 45%,
+            transparent 70%),
+        linear-gradient(135deg, #ffffff 0%, #00eaff 50%, #ffffff 100%);
+    background-size: 200% auto, 200% auto;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: pomeTextShimmer 4s linear infinite; letter-spacing: 3px; line-height: 1.4;
+    font-family: 'Orbitron', 'Microsoft YaHei', sans-serif;
+    /* 颜色随 --glow 平滑渐入渐出 */
+    transition: --glow .45s ease, transform .5s cubic-bezier(.22,.9,.24,1), text-shadow .5s ease;
+}
+/* 鼠标在框内：金红光晕 + 轻微放大 */
+.pome-slogan-box.is-hover .pome-slogan-text {
+    --glow: 1;
+    transform: scale(1.02);
+    text-shadow: 0 0 calc(8px + 16px * var(--glow)) rgba(255, 45, 85, .55);
+}
+/* 副标题：仅微微染金，同样跟随 glow */
+.pome-slogan-sub {
+    font-size: 0.85em; color: rgba(0, 234, 255, 0.7); margin-top: 12px; font-style: italic;
+    transition: color .5s ease;
+}
+.pome-slogan-box.is-hover .pome-slogan-sub { color: rgba(255, 215, 0, calc(.6 + .4 * var(--glow))); }
+
+/* 彩蛋激活态（密语）：整体偏红金，但依然柔和不跳变 */
+.pome-slogan-box.easter-egg {
+    border-color: rgba(255, 45, 85, 0.55);
+    box-shadow: 0 0 36px rgba(255, 45, 85, 0.25);
+}
+.pome-slogan-box.easter-egg .pome-slogan-text {
+    /* 密语态：保持聚光结构，改为红金流光 */
+    --glow: 1;
+    background:
+        radial-gradient(circle 200px at var(--mx) var(--my),
+            rgba(255, 215, 0, .5) 0%,
+            rgba(255, 45, 85, .35) 50%,
+            transparent 72%),
+        linear-gradient(135deg, #ff4d4d, #ff2d55, #ff9500, #ffd700);
+    background-size: 200% auto, 200% auto; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; animation: pomeTextShimmer 3s linear infinite;
+    letter-spacing: 4px; text-shadow: 0 0 18px rgba(255, 45, 85, .5);
+}
+.pome-slogan-box.easter-egg .pome-slogan-sub { color: #ff8f8f; }
+
+/* 终极彩蛋：光幕更深红、带脉冲呼吸 */
+.egg-overlay.ultimate {
+    background:
+        radial-gradient(circle 120vmax at var(--egg-mx) var(--egg-my),
+            rgba(70, 0, 25, .97) 0%,
+            rgba(30, 0, 15, .97) 50%,
+            rgba(0, 0, 10, .98) 100%);
+}
+.egg-overlay.ultimate .egg-glyph {
+    text-shadow: 0 0 60px rgba(255, 45, 85, .9);
+    animation: eggGlow 2.5s linear infinite;
+}
+/* 剑徽脉动 */
+.main-btn.ultimate-pulse {
+    animation: ultimatePulse 1.3s ease-in-out 2;
+}
+@keyframes ultimatePulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,45,85,0); transform: scale(1); }
+    50%      { box-shadow: 0 0 70px rgba(255,45,85,.95); transform: scale(1.18); }
+}
+
+/* 彩蛋光幕（全屏） */
+.egg-overlay {
+    --egg-mx: 50%; --egg-my: 50%;
+    position: fixed; inset: 0; z-index: 9999999;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    /* 背景从鼠标点击处向外扩散（径向放大），配合 opacity 双过渡 */
+    background:
+        radial-gradient(circle 120vmax at var(--egg-mx) var(--egg-my),
+            rgba(30, 0, 45, .96) 0%,
+            rgba(15, 0, 25, .97) 45%,
+            rgba(0, 0, 10, .98) 100%);
+    opacity: 0; visibility: hidden;
+    transform: scale(.6); transform-origin: var(--egg-mx) var(--egg-my);
+    transition:
+        opacity .7s cubic-bezier(.22,.9,.24,1),
+        transform .9s cubic-bezier(.16,1,.3,1),
+        visibility .7s;
+    cursor: pointer; pointer-events: none;
+}
+.egg-overlay.show { opacity: 1; visibility: visible; transform: scale(1); pointer-events: auto; }
+.egg-glyph {
+    font-family: 'Orbitron', sans-serif; font-size: 5rem; font-weight: 900;
+    background: linear-gradient(135deg, #ff4d4d, #ff2d55, #ff9500, #ffd700, #00eaff, #ff4d4d);
+    background-size: 300% 100%; -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; animation: eggGlow 4s linear infinite;
+    text-shadow: 0 0 40px rgba(255, 45, 85, 0.6); letter-spacing: 8px;
+    /* 弹性放大入场，替代生硬出现 */
+    opacity: 0; transform: scale(.7);
+    transition: opacity .8s .15s cubic-bezier(.22,.9,.24,1), transform 1s .15s cubic-bezier(.34,1.56,.64,1);
+}
+.egg-overlay.show .egg-glyph { opacity: 1; transform: scale(1); }
+.egg-line {
+    margin-top: 26px; font-size: 1.1rem; color: rgba(255,255,255,.9);
+    letter-spacing: 3px;
+    opacity: 0; transform: translateY(14px);
+    transition: opacity .7s .45s ease, transform .7s .45s cubic-bezier(.22,.9,.24,1);
+}
+.egg-overlay.show .egg-line { opacity: 1; transform: translateY(0); }
+.egg-hint { margin-top: 40px; font-size: .82rem; color: rgba(255,255,255,.4); letter-spacing: 1px;
+    opacity: 0; transform: translateY(10px);
+    transition: opacity .7s .75s ease, transform .7s .75s cubic-bezier(.22,.9,.24,1);
+}
+.egg-overlay.show .egg-hint { opacity: 1; transform: translateY(0); }
+
+/* =========================================
+   流星雨弹幕（鼓励语）
+   - 字号大、带半透明底色气泡，确保清晰可读
+   - 尾迹加长，坠落速度偏慢，文字停留更久
+   - 不自动关闭：光幕常驻，流星持续生成直到手动关闭
+   ========================================= */
+/*
+ * 流星结构（flex 行，从左到右排列）：  [tail 尾迹]  [head 头部亮点]  [text 文字气泡]
+ * 运动方向：整体向右下位移（translate X、Y 均为正）。
+ * 因此「拖尾应在头部左上方（运动方向的反方向 / 来向）」。
+ * - 尾迹用 scaleX(-1) 翻转 + 负 margin 拉到头部左侧，渐变右端(currentColor)贴住头部、左端透明。
+ * - 文字气泡紧跟头部右侧（margin-left），随流星一起坠落、淡入淡出。
+ */
+.meteor {
+    position: fixed; pointer-events: none; z-index: 99999999;
+    display: flex; align-items: center;
+    flex-direction: row;            /* head 在前（右），tail 在后（左） */
+    will-change: transform, opacity;
+    animation: meteorFall linear forwards;
+}
+/* 流星头部（亮点，运动方向最前方） */
+.meteor::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 8px #fff, 0 0 18px currentColor;
+    flex-shrink: 0;
+}
+/* 长尾迹：位于头部左侧（运动来向 / 后方），越远离头部越透明 */
+.meteor::after {
+    content: ''; width: 150px; height: 2px; flex-shrink: 0;
+    /* 右端(currentColor) 亮 = 贴近头部，左端(transparent) 透明 = 远离头部 */
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.35) 55%, currentColor 100%);
+    /* 翻转 + 负 margin，把尾迹拉到头部左侧，亮端始终贴住头部 */
+    margin-left: -150px;
+    transform-origin: right center;
+    transform: scaleX(-1);
+}
+/* 鼓励语文字气泡：大字号 + 底色，清晰可读，紧跟头部右侧 */
+.meteor-text {
+    font-size: var(--meteor-text-size); font-weight: 700; color: #fff; margin-left: 14px;
+    white-space: nowrap; padding: var(--meteor-pad); border-radius: 10px;
+    background: rgba(0, 0, 0, 0.45); border: 1px solid currentColor;
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    font-family: 'Microsoft YaHei', sans-serif; letter-spacing: 1px;
+    opacity: 0; animation: meteorTextFade 2.4s ease-in-out forwards;
+}
+.meteor.ultimate .meteor-text { font-size: var(--meteor-text-size-ult); background: rgba(40, 0, 10, 0.5); }
+.meteor::after { width: var(--meteor-tail); }
+@keyframes meteorFall {
+    /* 整体从左上向右下位移；头部在前、尾迹在左后，方向正确 */
+    from { transform: translate(0, 0); opacity: 1; }
+    to   { transform: translate(var(--meteor-x), var(--meteor-y)); opacity: 0.9; }
+}
+@keyframes meteorTextFade {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    75%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ============================================================
+   弹幕响应式：按 屏幕宽度 + 方向(orientation) 覆盖 CSS 变量
+   - 竖屏(portrait)：屏幕窄，弹幕小、尾迹短、每批少、水平范围收窄
+   - 横屏(landscape)：屏幕宽，弹幕适中、尾迹长、每批多、铺满全宽
+   ============================================ */
+/* 通用窄屏（含手机竖屏） */
+@media (max-width: 768px) {
+    :root {
+        --meteor-text-size: 14px;
+        --meteor-text-size-ult: 17px;
+        --meteor-tail: 80px;
+        --meteor-x: 90px;
+        --meteor-y: 118vh;
+        --meteor-left-min: -1vw;
+        --meteor-left-max: 62vw;
+        --meteor-per-burst: 3;          /* 密度：每批 */
+        --meteor-interval: 720;         /* 手机端批次间隔（ms），越长越稀疏 */
+        --meteor-pad: 4px 10px;
+    }
+}
+/* 手机竖屏：最窄，弹幕最小、尾迹最短、单批更少、起始更靠左避免溢出 */
+@media (max-width: 768px) and (orientation: portrait) {
+    :root {
+        --meteor-text-size: 13px;
+        --meteor-text-size-ult: 15px;
+        --meteor-tail: 60px;
+        --meteor-x: 70px;
+        --meteor-y: 120vh;
+        --meteor-left-min: -3vw;
+        --meteor-left-max: 50vw;     /* 气泡长，起点再靠左，保证完整可见 */
+        --meteor-per-burst: 3;          /* 密度：每批（最稀疏) */
+        --meteor-interval: 900;         /* 竖屏窄，间隔更长，避免挤占 */
+        --meteor-pad: 3px 9px;
+    }
+}
+/* 手机横屏：宽但矮，弹幕略小、密度适中（避免满屏拥挤） */
+@media (max-width: 915px) and (orientation: landscape) {
+    :root {
+        --meteor-text-size: 15px;
+        --meteor-text-size-ult: 18px;
+        --meteor-tail: 110px;
+        --meteor-x: 120px;
+        --meteor-y: 125vh;           /* 高度矮，坠落距离要更长才出屏 */
+        --meteor-left-min: -4vw;
+        --meteor-left-max: 82vw;
+        --meteor-per-burst: 2;          /* 密度：每批 */
+        --meteor-interval: 600;         /* 横屏批次间隔 */
+        --meteor-pad: 5px 12px;
+    }
+}
+/* 平板竖屏：中等尺寸 */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+    :root {
+        --meteor-text-size: 17px;
+        --meteor-text-size-ult: 20px;
+        --meteor-tail: 120px;
+        --meteor-x: 120px;
+        --meteor-left-min: -5vw;
+        --meteor-left-max: 74vw;
+        --meteor-per-burst: 4;
+    }
+}
+
+.pome-slogan-box::before {
+    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, #00eaff, transparent);
+    animation: pomeLightSweep 3s ease-in-out infinite;
+}
+@keyframes pomeLightSweep { 0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; } }
+.pome-slogan-label { font-size: 0.9em; color: rgba(255, 255, 255, 0.6); margin-bottom: 10px; letter-spacing: 2px; }
+.pome-slogan-text {
+    font-size: 1.8em; font-weight: 900;
+    background: linear-gradient(135deg, #ffffff 0%, #00eaff 50%, #ffffff 100%);
+    background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: pomeTextShimmer 4s linear infinite; letter-spacing: 3px; line-height: 1.4;
+    font-family: 'Orbitron', 'Microsoft YaHei', sans-serif;
+}
+@keyframes pomeTextShimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+.pome-slogan-sub { font-size: 0.85em; color: rgba(0, 234, 255, 0.7); margin-top: 12px; font-style: italic; }
+/* 四张解释卡片 */
+.pome-explain-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 32px 0 24px; }
+.pome-explain-card {
+    background: rgba(0, 234, 255, 0.05); border: 1px solid rgba(0, 234, 255, 0.15);
+    border-radius: 12px; padding: 20px 14px; text-align: center; transition: all 0.3s ease;
+}
+.pome-explain-card:hover {
+    background: rgba(0, 234, 255, 0.12); border-color: rgba(0, 234, 255, 0.5);
+    transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0, 234, 255, 0.15);
+}
+.pome-explain-icon { font-size: 1.8em; margin-bottom: 8px; }
+.pome-explain-title { font-size: 1.1em; font-weight: 700; color: #00eaff; margin-bottom: 6px; }
+.pome-explain-desc { font-size: 0.82em; color: rgba(255, 255, 255, 0.7); line-height: 1.5; }
+.pome-origin-ending { margin-top: 28px !important; padding-top: 20px; border-top: 1px solid rgba(0, 234, 255, 0.15); text-align: center; }
+.pome-origin-ending strong { color: #00eaff; font-size: 1.1em; }
+@media (max-width: 768px) {
+    .pome-origin-inner { padding: 24px 16px; }
+    .pome-slogan-text { font-size: 1.2em; letter-spacing: 1px; }
+    .pome-explain-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .pome-explain-card { padding: 16px 10px; }
+}
+
+.ranking-list { padding: 20px; position: relative; overflow: visible; }
+
+.rank-item {
+    display: grid; grid-template-columns: 60px 1fr 100px;
+    align-items: center; padding: 18px 20px; margin-bottom: 12px;
+    background: transparent; border-radius: 12px;
+    border-left: 4px solid transparent; transition: all 0.3s ease;
+    position: relative; overflow: visible; cursor: pointer;
+}
+.rank-item:hover { background: rgba(255, 255, 255, 0.05); transform: translateY(-3px); }
+
+.rank-item.rank-1 { border-left-color: var(--gold); animation: glow-gold 2s infinite alternate; }
+.rank-item.rank-2 { border-left-color: var(--silver); animation: glow-silver 2s infinite alternate; }
+.rank-item.rank-3 { border-left-color: var(--bronze); animation: glow-bronze 2s infinite alternate; }
+
+@keyframes glow-gold { from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); } to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); } }
+@keyframes glow-silver { from { box-shadow: 0 0 10px rgba(192, 192, 192, 0.3); } to { box-shadow: 0 0 20px rgba(192, 192, 192, 0.6); } }
+@keyframes glow-bronze { from { box-shadow: 0 0 10px rgba(205, 127, 50, 0.3); } to { box-shadow: 0 0 10px rgba(205, 127, 50, 0.6); } }
+
+.rank-number { font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 900; text-align: center; }
+.rank-1 .rank-number { color: var(--gold); text-shadow: 0 0 10px var(--gold); }
+.rank-2 .rank-number { color: var(--silver); text-shadow: 0 0 10px var(--silver); }
+.rank-3 .rank-number { color: var(--bronze); text-shadow: 0 0 10px var(--bronze); }
+.rank-number.others { color: var(--rank-other-color); text-shadow: 0 0 8px var(--rank-other-color); }
+
+.rank-item .rank-number.others ~ .player-info .player-name { font-weight: 800; }
+
+.player-grade { font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 1.4rem; text-align: right; color: #4cd964; cursor: help; position: relative; }
+.player-grade::after {
+    content: attr(data-hint); position: absolute; bottom: 130%; right: 0;
+    background: rgba(0,0,0,.95); color: #fff; padding: 10px 14px;
+    border-radius: 6px; font-size: .85rem; white-space: normal;
+    min-width: 160px; max-width: 260px;
+    opacity: 0; visibility: hidden; transition: .3s; z-index: 9999;
+}
+.player-grade:hover::after { opacity: 1; visibility: visible; }
+
+.player-info { display: flex; flex-direction: column; gap: 5px; }
+.player-name.elite { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 1.3rem; background: var(--elite-gradient); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: shine 3s linear infinite; }
+@keyframes shine { to { background-position: 200% center; } }
+.player-name.member { color: #a0a0ff; }
+.player-name.trial { color: #707090; }
+.player-name.glitch { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.4rem; color: var(--glitch-color-2); animation: glitch-effect 1s infinite; text-shadow: 2px 2px 0 var(--glitch-color-1), -2px -2px 0 blue; }
+@keyframes glitch-effect {
+    0% { transform: translate(0); text-shadow: 2px 2px 0 red, -2px -2px 0 blue; }
+    20% { transform: translate(-2px, 2px); text-shadow: -2px -2px 0 blue, 2px 2px 0 white; }
+    40% { transform: translate(2px, -2px); text-shadow: 2px -2px 0 red, -2px 2px 0 blue; }
+    60% { transform: translate(-2px, -2px); text-shadow: -2px 2px 0 white, 2px -2px 0 blue; }
+    80% { transform: translate(2px, 2px); text-shadow: 2px 2px 0 blue, -2px -2px 0 red; }
+    100% { transform: translate(0); text-shadow: 2px 2px 0 red, -2px -2px 0 blue; }
+}
+.player-id { font-size: 0.85rem; color: var(--text-secondary); }
+
+.footer { text-align: center; padding: 20px; font-size: 0.8rem; color: #555; border-top: 1px solid var(--border-color); margin-top: 20px; }
+
+/* =========================================
+   搜索栏
+   ========================================= */
+.search-wrap {
+    position: fixed; top: 76px; left: 16px; z-index: 99999;
+    width: 210px;
+}
+.search-input {
+    width: 100%; padding: 6px 14px; font-size: 13px;
+    background: rgba(10, 10, 30, 0.65); backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 200, 255, 0.25); border-radius: 20px;
+    color: var(--text-primary); outline: none;
+}
+.search-input::placeholder { color: rgba(255, 255, 255, 0.45); }
+.search-results {
+    margin-top: 6px; border-radius: 10px; overflow: hidden;
+    background: rgba(10, 10, 30, 0.7); backdrop-filter: blur(8px);
+    display: none;
+}
+.search-results.active { display: block; }
+.search-item {
+    padding: 7px 14px; cursor: pointer; font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+}
+.search-item:hover { background: rgba(0, 200, 255, 0.15); }
+
+/* =========================================
+   详情弹窗
+   ========================================= */
+.modal-mask {
+    position: fixed; inset: 0; z-index: 999999;
+    background: rgba(0, 0, 0, 0.6); display: none;
+    align-items: center; justify-content: center;
+}
+.modal-mask.active { display: flex; }
+.modal {
+    width: 340px; background: rgba(10, 10, 30, 0.75); backdrop-filter: blur(14px);
+    border-radius: 16px; border: 1px solid var(--border-color);
+    padding: 24px; position: relative;
+}
+.modal-close { position: absolute; right: 14px; top: 10px; cursor: pointer; font-size: 18px; opacity: .7; color: #fff; }
+.modal-close:hover { opacity: 1; }
+
+.badge {
+    width: 72px; height: 72px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 28px; font-weight: 900;
+    margin: 0 auto 14px; font-family: 'Orbitron', sans-serif;
+}
+.badge.gold { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #fff; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+.badge.silver { background: linear-gradient(135deg, #e0e0e0, #aaa); color: #333; box-shadow: 0 0 20px rgba(192, 192, 192, 0.5); }
+.badge.bronze { background: linear-gradient(135deg, #cd7f32, #a86a28); color: #fff; box-shadow: 0 0 20px rgba(205, 127, 50, 0.5); }
+.badge.normal { background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(0,136,204,0.2)); color: var(--rank-other-color); border: 1px solid rgba(0,229,255,0.3); }
+
+.modal-name { text-align: center; font-size: 1.3rem; margin-bottom: 4px; }
+.modal-role { text-align: center; opacity: .8; font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+
+.info-card {
+    background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 14px;
+    font-size: 14px; line-height: 1.8;
+}
+.info-card p { display: flex; justify-content: space-between; align-items: center; }
+.info-card .label { color: var(--text-secondary); }
+.info-card .value { font-weight: 600; }
+
+.progress-wrap { margin-top: 16px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 12px; opacity: .7; margin-bottom: 4px; }
+.progress-bar { height: 8px; background: rgba(255,255,255,.12); border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #00eaff, #0088cc); border-radius: 6px; transition: width .6s ease; }
+
+/* =========================================
+   左下角工具箱
+   ========================================= */
+.toolbox { position: fixed; bottom: 120px; left: 24px; z-index: 99999; }
+.main-btn {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(10, 10, 30, 0.65); backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 200, 255, 0.25);
+    display: grid; place-items: center; cursor: pointer; position: relative;
+}
+.main-btn svg { transition: .3s; color: var(--accent); }
+.main-btn .pome-emblem { width: 38px; height: 38px; transition: .3s; }
+.main-btn .close-icon { opacity: 0; transform: rotate(-90deg); position: absolute; font-size: 20px; color: #fff; transition: .3s; }
+.toolbox.open .main-btn .gear-icon { opacity: 0; transform: rotate(90deg) scale(.4); }
+.toolbox.open .main-btn .close-icon { opacity: 1; transform: rotate(0); }
+
+.child-icons { position: absolute; inset: 0; pointer-events: none; }
+.child {
+    position: absolute; width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(10, 10, 30, 0.7); border: 1px solid rgba(0, 200, 255, 0.3);
+    display: grid; place-items: center; overflow: hidden;
+    opacity: 0; transform: scale(0);
+    transition: .35s cubic-bezier(.68, -.55, .27, 1.55);
+    pointer-events: auto;
+}
+.child img { width: 22px; height: 22px; object-fit: contain; display: block; }
+.child svg { width: 20px; height: 20px; }
+.child img:not([src]), .child img[src=""] { visibility: hidden; }
+
+.toolbox.open .child:nth-child(1) {
+    opacity: 1; transform: scale(1) translate(62px, -42px); transition-delay: .05s;
+}
+.toolbox.open .child:nth-child(2) {
+    opacity: 1; transform: scale(1) translate(74px, 0); transition-delay: .1s;
+}
+.toolbox.open .child:nth-child(3) {
+    opacity: 1; transform: scale(1) translate(62px, 42px); transition-delay: .15s;
+}
+
+.child::after {
+    content: attr(data-tip);
+    position: absolute; left: 110%; top: 50%; transform: translateY(-50%);
+    white-space: nowrap; font-size: 12px;
+    background: rgba(0, 0, 0, .75); padding: 4px 10px; border-radius: 6px;
+    opacity: 0; transition: .2s; pointer-events: none; color: #fff;
+}
+.child:hover::after { opacity: 1; }
+
+@keyframes pulse {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(0, 230, 255, 0.25); }
+}
+.rank-item.highlight { animation: pulse .8s ease 2; }
+
+@media (max-width: 520px) {
+    .ranking-list { padding: 10px; }
+    .rank-item { grid-template-columns: 40px 1fr 80px; padding: 12px 14px; }
+    .search-wrap { width: 180px; }
+    .navbar { gap: 8px; }
+    .nav-item { padding: 7px 16px; font-size: 14px; }
+}
+
+/* ---- 宣传视频区块（工会介绍页最下方） ---- */
+.intro-video { margin-top: 8px; }
+.video-wrap {
+    position: relative; width: 100%; max-width: 720px; margin: 0 auto;
+    aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 0 30px rgba(0, 150, 255, 0.18); background: #000;
+}
+.video-wrap iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    border: 0;
+}
+.video-caption { text-align: center; font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
+@media (max-width: 768px) and (orientation: portrait) {
+    .video-wrap { max-width: 100%; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎵 背景音乐：放一个 bgm.mp3 在同目录即可（彩蛋触发播放，关闭停止） -->
+<audio id="bgm" loop preload="auto" src="bgm.mp3"></audio>
+
+<!-- 背景 -->
+<img class="bg-img" alt="Background">
+<div class="bg-overlay"></div>
+
+<!-- 顶部导航栏（独立，吸顶） -->
+<nav class="navbar">
+    <div class="nav-item active" data-page="rank">🏆 排行榜</div>
+    <div class="nav-item" data-page="intro">🛡 工会介绍</div>
+</nav>
+
+<!-- 搜索栏 -->
+<div class="search-wrap">
+    <input class="search-input" id="searchInput" placeholder="搜索玩家名 / 排名">
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- 公告栏 -->
+<div id="notice">
+    本排行榜纯属娱乐，请勿过度解读。<br>
+    数据仅供公会内部交流，不代表官方立场。<br>
+    排名波动属正常现象，不构成任何评价依据。<br>
+    如有异议，请以"都是演的"的心态看待 😄
+    <br><br>
+    <button id="closeNotice" disabled>请阅读 5 秒 (5)</button>
+</div>
+
+<!-- 主体容器 -->
+<div class="container">
+    <!-- 排行榜页 -->
+    <div class="page active" id="page-rank">
+        <div class="header">
+            <h1>POME 剑术 PVP 榜</h1>
+            等级 D5 ~ A1 | 悬停查看备注 | 荣耀归于胜者
+        </div>
+        <div class="ranking-list" id="rankingList"></div>
+    </div>
+
+    <!-- 工会介绍页 -->
+    <div class="page" id="page-intro">
+        <div class="ranking-list">
+            <div class="intro-content">
+                <div class="pome-origin-section">
+                    <div class="pome-origin-inner">
+                        <h2 class="pome-origin-title">POME · 光刃之契</h2>
+
+                        <div class="pome-story-text">
+                            <p>POME 最初源于一个独特的音译梗，带着几分随性与神秘。随着公会剑术体系的成型，我们不再满足于单纯的发音，而是为它赋予了属于近战之巅的终极定义。</p>
+                        </div>
+
+                        <div class="pome-slogan-box" id="pomeSloganBox">
+                            <div class="pome-slogan-label">官方重释</div>
+                            <div class="pome-slogan-text" id="pomeSloganText">POME = 剑出成束，光至人亡</div>
+                            <div class="pome-slogan-sub" id="pomeSloganSub">— 剑非铁，乃光；出鞘即胜负 —</div>
+                        </div>
+
+                        <div class="pome-explain-grid">
+                            <div class="pome-explain-card">
+                                <div class="pome-explain-icon">⚡</div>
+                                <div class="pome-explain-title">P · Pulse</div>
+                                <div class="pome-explain-desc">剑锋挥动的能量脉冲，出剑瞬间的爆发。</div>
+                            </div>
+                            <div class="pome-explain-card">
+                                <div class="pome-explain-icon">🌌</div>
+                                <div class="pome-explain-title">O · Of</div>
+                                <div class="pome-explain-desc">连接近战本源，凝聚于刃尖的纯粹。</div>
+                            </div>
+                            <div class="pome-explain-card">
+                                <div class="pome-explain-icon">⚔️</div>
+                                <div class="pome-explain-title">M · Melee</div>
+                                <div class="pome-explain-desc">近战之魂，以毫厘之差定生死。</div>
+                            </div>
+                            <div class="pome-explain-card">
+                                <div class="pome-explain-icon">💎</div>
+                                <div class="pome-explain-title">E · Edge</div>
+                                <div class="pome-explain-desc">极致的刃芒，贯穿战场的光束。</div>
+                            </div>
+                        </div>
+
+                        <div class="pome-story-text pome-origin-ending">
+                            <p>从此，<strong>POME</strong> 不再只是名字，而是战场上的现象。在 D5 到 A1 的刻度之上，真正的强者只在"光闪一下"里决出荣耀。荣耀归于胜者，光刃永存。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intro-section">
+                    <h2>关于 POME</h2>
+                    <p>POME 是一个热爱剑术 PVP 的公会组织，秉持"友谊第一、切磋第二"的精神，为成员提供公平竞技、技术交流、共同成长的平台。我们来自不同的服务器与阵营，却因对剑术的热爱汇聚于此。</p>
+                </div>
+
+                <div class="intro-section">
+                    <h2>公会文化</h2>
+                    <div class="intro-grid">
+                        <div class="intro-card">
+                            <div class="card-title">⚔️ 以剑会友</div>
+                            <div class="card-text">尊重每一位对手，胜不骄败不馁，在切磋中共同进步。</div>
+                        </div>
+                        <div class="intro-card">
+                            <div class="card-title">🤝 团结互助</div>
+                            <div class="card-text">新老成员相互扶持，高手带新手，营造良好的公会氛围。</div>
+                        </div>
+                        <div class="intro-card">
+                            <div class="card-title">🎯 公平公正</div>
+                            <div class="card-text">排行榜数据公开透明，一切成绩凭实力说话。</div>
+                        </div>
+                        <div class="intro-card">
+                            <div class="card-title">🔥 持续精进</div>
+                            <div class="card-text">鼓励成员不断挑战自我，冲击更高段位与排名。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="intro-section">
+                    <h2>段位体系</h2>
+                    <p>公会采用 D5 ~ A1 的段位分级体系，D5 为入门，A1 为巅峰。每个段位代表不同的实力水准，详细对应关系可在排行榜中查看。努力训练，向着 A1 进发吧！</p>
+                </div>
+
+                <div class="intro-section">
+                    <h2>加入我们</h2>
+                    <p>欢迎志同道合的剑术爱好者加入 POME 大家庭！无论你是初出茅庐的新人，还是身经百战的高手，这里都有属于你的位置。</p>
+                    <p style="margin-top:8px;color:var(--accent);">📮 QQ 群：984791456</p>
+                    <a class="join-btn" href="https://jq.qq.com/?k=984791456" target="_blank">立即申请加入</a>
+                </div>
+                <div class="intro-section intro-video">
+                    <h2>宣传视频</h2>
+                    <p>先感受一下 POME 公会的热血战斗氛围，然后加入我们并肩作战！</p>
+                    <div class="video-wrap">
+                        <iframe src="https://player.bilibili.com/player.html?isOutside=true&aid=112773392568109&bvid=BV1Qwb4etE6F&cid=500001613202513&p=1"
+                                scrolling="no" border="0" frameborder="no" framespacing="0"
+                                allowfullscreen="true" allow="autoplay; fullscreen">
+                        </iframe>
+                    </div>
+                    <div class="video-caption">▲ POME 公会招人 · 我愿寻得星光</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        POME工会 © 2026 | q群：984791456 | 数据实时更新
+    </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-mask" id="modalMask">
+    <div class="modal">
+        <span class="modal-close" id="modalClose">✕</span>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<!-- 彩蛋光幕 -->
+<div class="egg-overlay" id="eggOverlay">
+    <div class="egg-glyph">POME</div>
+    <div class="egg-line">⚡ 你听见了剑刃共振的声音 ⚡</div>
+    <div class="egg-hint">— 点击任意处 收束光芒 —</div>
+</div>
+
+<!-- 左下角工具箱 -->
+<div class="toolbox" id="toolbox">
+    <div class="main-btn" title="POME 工具箱">
+        <!-- POME 剑徽（测试版本：圆形渐变底 + 交叉剑 + POME 文字） -->
+        <svg class="gear-icon pome-emblem" viewBox="0 0 64 64" width="34" height="34" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="pomeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%"  stop-color="#00eaff"/>
+                    <stop offset="55%" stop-color="#0088cc"/>
+                    <stop offset="100%" stop-color="#003a5c"/>
+                </linearGradient>
+                <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%"  stop-color="#ffffff"/>
+                    <stop offset="60%" stop-color="#aef0ff"/>
+                    <stop offset="100%" stop-color="#00eaff"/>
+                </linearGradient>
+                <filter id="pomeGlow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="1.6" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+            </defs>
+            <!-- 圆形徽章底 -->
+            <circle cx="32" cy="32" r="28" fill="url(#pomeGrad)" stroke="rgba(0,234,255,0.75)" stroke-width="2"/>
+            <!-- 交叉双剑 -->
+            <g filter="url(#pomeGlow)" stroke="url(#bladeGrad)" stroke-width="3" stroke-linecap="round" fill="none">
+                <line x1="14" y1="48" x2="44" y2="18"/>   <!-- 剑身1 -->
+                <line x1="50" y1="48" x2="20" y2="18"/>   <!-- 剑身2 -->
+            </g>
+            <!-- 剑柄 -->
+            <g stroke="#ffd700" stroke-width="2.4" stroke-linecap="round">
+                <line x1="14" y1="48" x2="11" y2="53"/>
+                <line x1="50" y1="48" x2="53" y2="53"/>
+            </g>
+            <!-- 剑格护手 -->
+            <g stroke="#ffd700" stroke-width="2.6" stroke-linecap="round">
+                <line x1="12" y1="20" x2="18" y2="18"/>
+                <line x1="46" y1="20" x2="52" y2="18"/>
+            </g>
+            <!-- POME 文字 -->
+            <text x="32" y="60" text-anchor="middle" font-family="Orbitron, sans-serif"
+                  font-size="9" font-weight="900" fill="#ffffff" letter-spacing="1.2">POME</text>
+        </svg>
+        <span class="close-icon">✕</span>
+
+        <div class="child-icons">
+            <!-- GitHub 第1个 -->
+            <a class="child" data-tip="GitHub" href="https://github.com/pome-head/POME_sword-rank#" target="_blank">
+                <svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.31 6.84 9.66.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.39-3.37-1.39-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.85.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.04 1.03-2.76-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.2 9.2 0 0 1 12 6.8c.85 0 1.71.12 2.51.35 1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.64 1.03 2.76 0 3.95-2.34 4.82-4.57 5.07.36.32.68.94.68 1.9 0 1.37-.01 2.48-.01 2.82 0 .27.18.58.69.48A10 10 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"/></svg>
+            </a>
+            <!-- EC 第2个 -->
+            <a class="child" data-tip="EaseCation" href="https://www.easecation.net/" target="_blank">
+                <img src="ec-icon.png" alt="" onerror="this.style.opacity=0">
+            </a>
+            <!-- 布吉岛 第3个 -->
+            <a class="child" data-tip="布吉岛" href="https://mcbjd.net/" target="_blank">
+                <img src="bujidao-icon.png" alt="" onerror="this.style.opacity=0">
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+/* 公告栏 */
+let s = 5, btn = document.getElementById("closeNotice");
+const notice = document.getElementById("notice");
+notice.classList.add("show");
+const t = setInterval(() => {
+    s--; btn.textContent = s > 0 ? `请阅读 5 秒 (${s})` : "我知道了";
+    if (s <= 0) { clearInterval(t); btn.disabled = false; }
+}, 1000);
+btn.onclick = () => notice.classList.remove("show");
+
+/* =========================================
+   导航栏切换（新增）
+   ========================================= */
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        // 切换导航高亮
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        item.classList.add('active');
+        // 切换页面
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + page).classList.add('active');
+        // 切换后关闭搜索结果与工具箱
+        searchResults.classList.remove('active');
+        toolbox.classList.remove('open');
+    });
+});
+
+/* 排行榜数据 & 排序 */
+const players = [
+    { name: "null", grade: "A1", role: "？？？", hint: "未知存在，数据读取失败..." },
+    { name: "pome彡遗丿忘", grade: "C3", role: "会长", hint: "最佳成绩" },
+    { name: "pome彡逸丿秋", grade: "D1", role: "精英", hint: "退休" },
+    { name: "pome彡仁丿鸡", grade: "D1", role: "精英", hint: "最佳成绩" },
+    { name: "也曾与之并肩", grade: "D2", role: "精英", hint: "退休" },
+    { name: "pome彡胡丿桃", grade: "D3", role: "精英", hint: "退休" },
+    { name: "pome彡摔丿鸽", grade: "D3", role: "精英", hint: "退休" },
+    { name: "pome雨", grade: "D3", role: "会员", hint: "最佳成绩" },
+    { name: "pome彡猫丿漿", grade: "--", role: "会员", hint: "还没有成绩哦" },
+    { name: "他始终是过客", grade: "--", role: "成员", hint: "还没有成绩哦" },
+    { name: "克莱因蓝_狼", grade: "--", role: "成员", hint: "还没有成绩哦" },
+    { name: "浙江的猫猫", grade: "--", role: "成员", hint: "还没有成绩哦" },
+    { name: "pome彡落丿衡", grade: "--", role: "成员", hint: "还没有成绩哦" },
+    { name: "pome彡心丿碎", grade: "--", role: "成员", hint: "还没有成绩哦" }
+];
+
+const gradeOrder = {};
+["D5","D4","D3","D2","D1","C5","C4","C3","C2","C1","B5","B4","B3","B2","B1","A5","A4","A3","A2","A1"]
+.forEach((g,i)=>gradeOrder[g]=i);
+const roleOrder = {"？？？":6,"会长":5,"精英":4,"会员":3,"成员":2};
+
+players.sort((a,b)=>{
+    const g = (gradeOrder[b.grade]||-1)-(gradeOrder[a.grade]||-1);
+    if(g!==0) return g;
+    return roleOrder[b.role]-roleOrder[a.role];
+});
+
+/* 渲染排行榜 */
+const listEl = document.getElementById("rankingList");
+players.forEach((p,i)=>{
+    const r = i + 1;
+    const d = document.createElement("div");
+    d.className = `rank-item ${r===1?'rank-1':r===2?'rank-2':r===3?'rank-3':''}`;
+    d.dataset.rank = r;
+    d.innerHTML = `
+        <div class="rank-number ${r>3?'others':''}">${String(r).padStart(2,'0')}</div>
+        <div class="player-info">
+            <div class="player-name ${
+                p.role==='？？？'?'glitch':
+                p.role==='会长'||p.role==='精英'?'elite':
+                p.role==='会员'?'member':'trial'
+            }">${p.name}</div>
+            <div class="player-id">${p.role}</div>
+        </div>
+        <div class="player-grade" data-hint="${p.hint}">${p.grade}</div>
+    `;
+    d.addEventListener('click', () => openModal(p, r));
+    listEl.appendChild(d);
+});
+
+/* 搜索功能 */
+const searchInput = document.getElementById("searchInput");
+const searchResults = document.getElementById("searchResults");
+
+searchInput.addEventListener('input', () => {
+    const v = searchInput.value.trim();
+    searchResults.innerHTML = '';
+    if (!v) { searchResults.classList.remove('active'); return; }
+
+    const res = players.filter((p, i) =>
+        p.name.includes(v) || (i + 1) === Number(v)
+    ).slice(0, 6);
+
+    if (!res.length) { searchResults.classList.remove('active'); return; }
+
+    res.forEach((p) => {
+        const actualRank = players.indexOf(p) + 1;
+        const div = document.createElement('div');
+        div.className = 'search-item';
+        div.textContent = `#${actualRank} ${p.name}`;
+        div.addEventListener('click', () => {
+            // 确保在排行榜页再搜索
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelector('.nav-item[data-page="rank"]').classList.add('active');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-rank').classList.add('active');
+
+            openModal(p, actualRank);
+            document.querySelectorAll('.rank-item').forEach(r => r.classList.remove('highlight'));
+            const target = document.querySelector(`.rank-item[data-rank="${actualRank}"]`);
+            if (target) {
+                target.classList.add('highlight');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            searchResults.classList.remove('active');
+            searchInput.blur();
+        });
+        searchResults.appendChild(div);
+    });
+    searchResults.classList.add('active');
+});
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.search-wrap')) {
+        searchResults.classList.remove('active');
+    }
+});
+
+/* 详情弹窗 */
+const modalMask = document.getElementById("modalMask");
+const modalContent = document.getElementById("modalContent");
+
+function badgeClass(rank) {
+    if (rank === 1) return 'gold';
+    if (rank === 2) return 'silver';
+    if (rank === 3) return 'bronze';
+    return 'normal';
+}
+
+function openModal(p, rank) {
+    const total = players.length;
+    const pct = ((rank / total) * 100).toFixed(1);
+    const fillPct = ((1 - rank / total) * 100).toFixed(1);
+
+    modalContent.innerHTML = `
+        <div class="badge ${badgeClass(rank)}">#${rank}</div>
+        <div class="modal-name ${p.role==='？？？'?'glitch':p.role==='会长'||p.role==='精英'?'elite':p.role==='会员'?'member':'trial'}">${p.name}</div>
+        <div class="modal-role">${p.role}</div>
+        <div class="info-card">
+            <p><span class="label">🎖 排名</span><span class="value">#${rank} / ${total}</span></p>
+            <p><span class="label">⭐ 等级</span><span class="value">${p.grade}</span></p>
+            <p><span class="label">📝 备注</span><span class="value">${p.hint}</span></p>
+        </div>
+        <div class="progress-wrap">
+            <div class="progress-label">
+                <span>排行进度</span>
+                <span>前 ${pct}%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${fillPct}%"></div>
+            </div>
+        </div>
+    `;
+    modalMask.classList.add('active');
+}
+
+document.getElementById("modalClose").addEventListener('click', () => {
+    modalMask.classList.remove('active');
+});
+modalMask.addEventListener('click', (e) => {
+    if (e.target === modalMask) modalMask.classList.remove('active');
+});
+
+/* 工具箱 */
+const toolbox = document.getElementById("toolbox");
+toolbox.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toolbox.classList.toggle('open');
+});
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.toolbox')) toolbox.classList.remove('open');
+});
+
+/* 快捷键 */
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        modalMask.classList.remove('active');
+        searchResults.classList.remove('active');
+        toolbox.classList.remove('open');
+    }
+    if (e.key === '/') { e.preventDefault(); searchInput.focus(); }
+});
+
+/* ===== POME 标语：聚光变色（仅鼠标覆盖处渐变）+ 点击彩蛋 ===== */
+const sloganBox   = document.getElementById('pomeSloganBox');
+const sloganText  = document.getElementById('pomeSloganText');
+const sloganSub   = document.getElementById('pomeSloganSub');
+const eggOverlay  = document.getElementById('eggOverlay');
+
+const SECRET_TEXT  = '光 之 契 约 · 已 觉 醒';
+const SECRET_SUB   = '— 凡见此光者，皆为 POME 之人 —';
+
+/* 流星雨鼓励语库 */
+const METEOR_QUOTES = [
+    '剑出无悔，光至必胜 🗡',
+    '每一次挥剑，都是向巅峰的靠近 ✨',
+    '光刃之下，众生平等 ⚡',
+    '你比昨天的自己更强 💪',
+    'POME 的剑，永远指向黎明 🌅',
+    '不要怕输，怕的是不敢出鞘 🔥',
+    '0.2 秒的差距，就是王者的距离 ⏱',
+    '剑锋所至，皆是你的领地 🏰',
+    '光闪一下，胜负已分 ⚡',
+    '荣耀归于胜者，勇气属于每个出剑的人 🏆',
+    '你的剑，比想象的更亮 🌟',
+    '暗场里先亮起来的那道光，是你 💡',
+    '近战之魂，永不熄灭 🔥',
+    'Pulse of Melee Edge — 你就是脉冲本身 💥',
+    '剑非铁，乃心之所向 💙',
+    '每一道剑痕，都是写给未来的信 ✉',
+    '别低头，你的光会掉 🗡',
+    '斩断犹豫，光刃出鞘 🌪',
+    'POME 之人，生来就是光 🌈',
+    '下一剑，会更好 ⚔',
+    '哪怕 D5，也有 A1 的心 ❤️',
+    '稳住，你能赢 🛡',
+    '这一剑，名为信念 🌠',
+    '光芒会记住每一次出鞘 📖',
+    '永不退缩，即为光刃 🗲'
+];
+
+let   eggActive    = false;
+let   clickCount   = 0;
+let   rafId        = null;
+let   meteorInterval = null;   // 流星生成定时器（用于停止）
+
+/*
+ * ① 聚光效果：实时追踪鼠标在标语框内的坐标，
+ *   以 CSS 变量 --mx/--my 驱动 radial-gradient，实现"只有鼠标覆盖处才渐变变色"
+ */
+function updateGlow(e) {
+    const rect = sloganBox.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width)  * 100;
+    const y = ((e.clientY - rect.top)  / rect.height) * 100;
+    // 限制在框内范围，避免快速移动时光圈跑偏
+    const cx = Math.min(100, Math.max(0, x));
+    const cy = Math.min(100, Math.max(0, y));
+    // 用 requestAnimationFrame 节流，动画更顺
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+        sloganBox.style.setProperty('--mx', cx.toFixed(1) + '%');
+        sloganBox.style.setProperty('--my', cy.toFixed(1) + '%');
+        rafId = null;
+    });
+}
+
+sloganBox.addEventListener('mousemove', updateGlow);
+sloganBox.addEventListener('mouseenter', (e) => {
+    sloganBox.classList.add('is-hover');
+    updateGlow(e);
+});
+sloganBox.addEventListener('mouseleave', () => {
+    // 离开后 glow 归 0，聚光自然消散，恢复原色
+    sloganBox.classList.remove('is-hover');
+});
+
+/*
+ * ② 文字切换淡入淡出：先淡出 → 换字 → 淡入，避免生硬跳变
+ */
+function fadeText(el, newText, duration = 350) {
+    if (el.textContent === newText) return Promise.resolve();
+    return new Promise((resolve) => {
+        el.style.transition = `opacity ${duration}ms ease`;
+        el.style.opacity = '0';
+        setTimeout(() => {
+            if (newText !== undefined) el.textContent = newText;
+            el.style.opacity = '1';
+            // 过渡结束后清理内联样式，交还 CSS 控制
+            setTimeout(() => { el.style.transition = ''; }, duration + 50);
+            resolve();
+        }, duration);
+    });
+}
+
+/*
+ * ③ 点击彩蛋：光幕从"鼠标点击处"向外扩散，分阶段丝滑入场
+ */
+sloganBox.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (eggActive) return;
+
+    // 记录点击坐标，让光幕从该点扩散（见 CSS transform-origin）
+    const rect = sloganBox.getBoundingClientRect();
+    const mx = (((e.clientX - rect.left) / rect.width)  * 100).toFixed(1) + '%';
+    const my = (((e.clientY - rect.top)  / rect.height) * 100).toFixed(1) + '%';
+    eggOverlay.style.setProperty('--egg-mx', mx);
+    eggOverlay.style.setProperty('--egg-my', my);
+
+    // 连续点击 3 次 → 终极彩蛋
+    clickCount++;
+    if (clickCount >= 3) {
+        triggerUltimateEgg();
+        clickCount = 0;
+        return;
+    }
+
+    triggerEgg();
+});
+
+async function triggerEgg() {
+    eggActive = true;
+
+    // 🎵 播放背景音乐（必须在第一个 await 之前，保持在用户点击的同步调用栈内，否则浏览器会拦截）
+    playBgm();
+
+    // 标语文字淡出 → 换密语 → 淡入（不再硬切）
+    await fadeText(sloganText, SECRET_TEXT);
+    sloganSub.textContent = SECRET_SUB;
+
+    // 全屏光幕：弹性放大 + 淡入（CSS .show 已带缓动）
+    eggOverlay.classList.add('show');
+
+    // 启动流星雨弹幕（不自动关闭，持续生成直到手动关闭）
+    startMeteorShower(false);
+}
+
+/* 点击光幕任意处 → 收束，恢复标语（手动关闭） */
+eggOverlay.addEventListener('click', () => {
+    closeEgg();
+});
+
+/* ===== 流星雨系统 ===== */
+
+/*
+ * 读取 :root 上的响应式 CSS 变量（由 @media 按 竖屏/横屏/宽窄 自动覆盖），
+ * 从而让弹幕参数（字号、尾迹、每批数量、水平范围）跟随设备实时变化。
+ */
+function getMeteorConfig() {
+    const cs = getComputedStyle(document.documentElement);
+    const num = (name, fallback) => {
+        const v = parseFloat(cs.getPropertyValue(name).trim());
+        return isNaN(v) ? fallback : v;
+    };
+    return {
+        perBurst: Math.max(1, Math.round(num('--meteor-per-burst', 4))),
+        interval: Math.max(200, num('--meteor-interval', 420)),  // 批次间隔(ms)，手机端更长=更稀疏
+        minL:     num('--meteor-left-min', -9),   // vw
+        maxL:     num('--meteor-left-max', 77),   // vw
+    };
+}
+
+/*
+ * 流星雨「均匀分布」策略：
+ *  - 每批(burst)同时发出 perBurst 颗，水平方向按格子均分（step = 可用宽度 / 颗数），
+ *    每颗落在自己格子的中心 + 小抖动，保证全宽均匀铺满、不扎堆。
+ *  - 批次间做蛇形错开(bandOffset)，避免每次都在同一列。
+ *  - 每批都重新读取配置，因此横竖屏切换后下一批立即生效。
+ */
+function startMeteorShower(isUltimate) {
+    stopMeteorShower();                       // 防止重复启动
+    const cfg = getMeteorConfig();
+    // 终极彩蛋：在基础密度上加密（但不超过配置上限的 +2）
+    const perBurst = isUltimate ? Math.max(cfg.perBurst + 2, 5) : cfg.perBurst;
+    // 批次间隔：由 CSS 变量驱动，手机端自动更长 → 更稀疏；终极适当加密
+    const interval = isUltimate ? Math.max(220, cfg.interval * 0.6) : cfg.interval;
+    let bandOffset = 0;                       // 批次间水平错开量，避免每次同列
+
+    // 立即首发一批，避免等待间隔
+    spawnBurst(perBurst, bandOffset, isUltimate);
+    bandOffset++;
+
+    meteorInterval = setInterval(() => {
+        spawnBurst(perBurst, bandOffset, isUltimate);
+        bandOffset++;
+    }, interval);
+}
+
+/* 一批流星：在水平方向均匀取 perBurst 个位置（格子中心 + 小抖动 + 蛇形错开） */
+function spawnBurst(perBurst, bandOffset, isUltimate) {
+    const { minL, maxL } = getMeteorConfig();        // 每次取最新（响应横竖屏切换）
+    const range = Math.max(1, maxL - minL);
+    const step = range / perBurst;                   // 每颗占一个格子
+    for (let i = 0; i < perBurst; i++) {
+        // 格子中心为基础位置
+        let left = minL + i * step + step / 2;
+        // 蛇形错开：偶数批向左、奇数批向右，避免每批同列
+        const offset = (bandOffset % 2 === 0 ? 1 : -1) * (step * 0.35);
+        left += offset;
+        // 小抖动，让自然感更强（不超过本格子）
+        left += (Math.random() - 0.5) * (step * 0.3);
+        left = Math.max(minL, Math.min(maxL, left));
+        spawnMeteor(isUltimate, left);
+    }
+}
+
+/* 停止流星雨：清除定时器 + 移除页面上现有流星 */
+function stopMeteorShower() {
+    if (meteorInterval) {
+        clearInterval(meteorInterval);
+        meteorInterval = null;
+    }
+    document.querySelectorAll('.meteor').forEach(m => m.remove());
+}
+
+/* 生成一颗流星：位置（可指定 left 以实现均匀分布）、颜色、速度 + 鼓励语 */
+function spawnMeteor(isUltimate, left) {
+    const meteor = document.createElement('div');
+    meteor.className = 'meteor' + (isUltimate ? ' ultimate' : '');
+
+    // 颜色：普通青蓝/白/绿，终极红金/橙
+    const palette = isUltimate
+        ? ['#ff4500', '#ffd700', '#ff2d55', '#ff9500', '#ffffff']
+        : ['#00eaff', '#5ac8fa', '#4cd964', '#ffffff', '#00ffd5'];
+    meteor.style.color = palette[Math.floor(Math.random() * palette.length)];
+
+    // 水平起点：优先用均匀计算出的 left，未传则随机兜底（避免贴边）
+    meteor.style.left = (left != null ? left : (Math.random() * 75 + 8)) + 'vw';
+    meteor.style.top  = '-90px';
+    meteor.style.animationDuration = (Math.random() * 1.6 + 2.6) + 's';
+
+    // 鼓励语文字气泡
+    const text = document.createElement('span');
+    text.className = 'meteor-text';
+    text.textContent = METEOR_QUOTES[Math.floor(Math.random() * METEOR_QUOTES.length)];
+    meteor.appendChild(text);
+
+    document.body.appendChild(meteor);
+    // 动画结束后自动移除 DOM（不影响仍在坠落的其它流星）
+    meteor.addEventListener('animationend', () => meteor.remove(), { once: true });
+}
+
+async function closeEgg() {
+    // 🎵 停止背景音乐
+    stopBgm();
+    // 先停止流星雨（现有流星自然飞完即清），再收束光幕
+    stopMeteorShower();
+    eggOverlay.classList.remove('show', 'ultimate');
+
+    // 等光幕淡出得差不多再复位文字（与过渡时长匹配）
+    setTimeout(async () => {
+        await fadeText(sloganText, 'POME = 剑出成束，光至人亡', 300);
+        sloganSub.textContent = '— 剑非铁，乃光；出鞘即胜负 —';
+        eggActive = false;
+    }, 450);
+}
+
+/* 终极彩蛋：连续 3 击 → 更深红场 + 剑徽脉动 + 密集红金流星 */
+function triggerUltimateEgg() {
+    // 直接走常规彩蛋流程（含文字淡入）
+    triggerEgg();
+    // 终极：背景更浓、剑徽脉动由 CSS 类控制
+    eggOverlay.classList.add('ultimate');
+    const mainBtn = document.querySelector('.main-btn');
+    if (mainBtn) {
+        mainBtn.classList.add('ultimate-pulse');
+        setTimeout(() => mainBtn.classList.remove('ultimate-pulse'), 2600);
+    }
+    // 注意：不再自动关闭光幕，ultimate 类保留至手动关闭时一起清除
+}
+
+/* ===== 🎵 背景音乐控制（彩蛋播放 / 关闭停止） ===== */
+function playBgm() {
+    const bgm = document.getElementById('bgm');
+    if (!bgm) return;
+    bgm.volume = 0.5;
+    bgm.currentTime = 0;          // 每次从头播放
+    const p = bgm.play();
+    // 捕获自动播放拦截错误，避免控制台红字（用户未交互时）
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+}
+
+function stopBgm() {
+    const bgm = document.getElementById('bgm');
+    if (!bgm) return;
+    bgm.pause();
+    bgm.currentTime = 0;
+}
+
+/* ===== 横竖屏 / 窗口尺寸变化时：让弹幕参数实时生效 =====
+ *  - 重新设置 --vh（解决移动端地址栏导致的 100vh 偏差）
+ *  - 若彩蛋正在展示，立即用新配置重启流星雨，避免残留旧尺寸布局
+ */
+function syncViewportVars() {
+    // 用 window.innerHeight 兜底，规避移动端 100vh 被工具栏裁剪的问题
+    document.documentElement.style.setProperty('--vh', window.innerHeight + 'px');
+}
+syncViewportVars();
+
+let resizeTimer = null;
+function onViewportChange() {
+    syncViewportVars();
+    // 横竖屏切换且彩蛋正开着：用新配置无缝重启流星雨
+    if (eggActive && meteorInterval) {
+        const isUlt = eggOverlay.classList.contains('ultimate');
+        startMeteorShower(isUlt);
+    }
+}
+window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(onViewportChange, 150);   // 防抖，避免拖拽时狂触发
+});
+window.addEventListener('orientationchange', () => {
+    // 方向切换延迟一帧，等浏览器完成重排再取值
+    setTimeout(onViewportChange, 200);
+});
+
+</script>
+
+</body>
+</html>
